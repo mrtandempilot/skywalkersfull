@@ -1,0 +1,32 @@
+export interface Tour {
+  id: string;
+  name: string;
+  name_tr: string;
+  slug: string;
+  category: 'Sky' | 'Land' | 'Water';
+  short_description: string;
+  short_description_tr: string;
+  full_description: string | null;
+  full_description_tr: string | null;
+  price_adult: number;
+  price_child: number | null;
+  currency: 'TRY' | 'USD' | 'EUR';
+  duration: string;
+  start_times: string[] | null;
+  meeting_point: string | null;
+  meeting_point_tr: string | null;
+  pickup_available: boolean;
+  age_limit: string | null;
+  fitness_level: string | null;
+  included: string[];
+  included_tr: string[];
+  not_included: string[] | null;
+  not_included_tr: string[] | null;
+  what_to_bring: string[];
+  what_to_bring_tr: string[];
+  image_url: string;
+  gallery_urls: string[] | null;
+  is_active: boolean;
+  rating: number | null;
+  created_at: string;
+}
