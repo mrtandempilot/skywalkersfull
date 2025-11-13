@@ -6,6 +6,9 @@ import { getCurrentUser } from '@/lib/auth';
 import QuickActions from './QuickActions';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { NotificationProvider } from './NotificationProvider';
+import { NotificationToast } from './NotificationToast';
+import Chatbot from './Chatbot';
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -27,20 +30,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     checkAdmin();
   }, [pathname]);
 
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        {children}
-        <Footer />
-      </>
-    );
-  }
-
   return (
-    <>
+    <NotificationProvider>
       <Navbar />
-      {isAdmin ? (
+      <NotificationToast />
+      <Chatbot />
+      {loading ? (
+        <>
+          {children}
+          <Footer />
+        </>
+      ) : isAdmin ? (
         <div className="flex">
           <QuickActions />
           <div className="flex-1">
@@ -48,9 +48,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           </div>
         </div>
       ) : (
-        children
+        <>
+          {children}
+          <Footer />
+        </>
       )}
-      <Footer />
-    </>
+    </NotificationProvider>
   );
 }

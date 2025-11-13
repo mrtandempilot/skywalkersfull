@@ -170,6 +170,38 @@ export async function POST(request: NextRequest) {
       // Continue even if calendar creation fails
     }
 
+    // Send email notification to admin
+    console.log('📧 Attempting to send booking email notification...');
+    try {
+      // Import email functions
+      const { sendEmailNotification, EmailTemplates } = await import('@/lib/email');
+      
+      const emailData = {
+        customer_name: booking.customer_name,
+        tour_name: booking.tour_name,
+        total_amount: booking.total_amount,
+        booking_date: booking.booking_date,
+        customer_email: booking.customer_email,
+        customer_phone: user.phone || ''
+      };
+
+      console.log('📧 Email data:', emailData);
+      console.log('📧 Sending to: faralyaworks@gmail.com');
+
+      // Create email template
+      const emailNotification = EmailTemplates.bookingNotification(emailData);
+      emailNotification.to = 'faralyaworks@gmail.com';
+
+      // Send email
+      const result = await sendEmailNotification(emailNotification);
+
+      console.log('📧 Email send result:', result ? 'Success' : 'Failed');
+    } catch (emailError: any) {
+      console.error('📧 Failed to send email notification:', emailError);
+      console.error('📧 Error details:', emailError?.message || emailError);
+      // Don't fail the booking if email fails
+    }
+
     return NextResponse.json(booking);
   } catch (error: any) {
     console.error('Error creating booking:', error);
@@ -182,6 +214,27 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const customerEmail = searchParams.get('customer_email');
+
+    // If customer_email is provided, this is an admin request
+    if (customerEmail) {
+      // Use admin client to bypass RLS
+      const { data, error } = await supabaseAdmin
+        .from('bookings')
+        .select('*')
+        .eq('customer_email', customerEmail)
+        .order('booking_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching bookings by email:', error);
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      return NextResponse.json(data || []);
+    }
+
+    // Regular user request - require authentication
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

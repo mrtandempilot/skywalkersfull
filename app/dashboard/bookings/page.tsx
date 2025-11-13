@@ -12,6 +12,8 @@ interface Booking {
   customer_phone?: string;
   tour_name: string;
   booking_date: string;
+  tour_start_time?: string;
+  duration?: number;
   adults: number;
   children: number;
   total_amount: number;
@@ -19,6 +21,12 @@ interface Booking {
   created_at: string;
   hotel_name?: string;
   notes?: string;
+}
+
+interface Invoice {
+  id: string;
+  booking_id: string;
+  invoice_number: string;
 }
 
 interface Customer {
@@ -38,6 +46,8 @@ export default function AdminBookingsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedBooking, setExpandedBooking] = useState<number | null>(null);
   const [customersData, setCustomersData] = useState<Map<string, Customer>>(new Map());
+  const [invoices, setInvoices] = useState<Map<string, Invoice>>(new Map());
+  const [creatingInvoice, setCreatingInvoice] = useState<number | null>(null);
 
   useEffect(() => {
     checkAuthAndLoadBookings();
@@ -99,6 +109,21 @@ export default function AdminBookingsPage() {
         });
         setCustomersData(customerMap);
       }
+
+      // Load invoices
+      const { data: invoicesData } = await supabase
+        .from('invoices')
+        .select('id, booking_id, invoice_number');
+
+      if (invoicesData) {
+        const invoiceMap = new Map<string, Invoice>();
+        invoicesData.forEach(invoice => {
+          if (invoice.booking_id) {
+            invoiceMap.set(invoice.booking_id, invoice);
+          }
+        });
+        setInvoices(invoiceMap);
+      }
     } catch (error) {
       console.error('Error loading bookings:', error);
     } finally {
@@ -117,9 +142,61 @@ export default function AdminBookingsPage() {
 
       // Reload bookings to reflect the change
       await loadBookings();
+      
+      // Show success message if invoice was auto-created
+      if (newStatus === 'completed') {
+        setTimeout(() => {
+          alert('✅ Booking completed! Invoice will be auto-created.');
+        }, 500);
+      }
     } catch (error) {
       console.error('Error updating booking status:', error);
       alert('Failed to update booking status');
+    }
+  };
+
+  const createInvoiceManually = async (booking: Booking) => {
+    setCreatingInvoice(booking.id);
+    try {
+      // Set due date to 30 days from now
+      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const response = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_id: booking.id,
+          customer_name: booking.customer_name,
+          customer_email: booking.customer_email,
+          customer_address: booking.hotel_name || '',
+          pilot_name: '', // Empty for now, can be filled later
+          flight_date: booking.booking_date,
+          flight_time: booking.tour_start_time || '10:00',
+          flight_duration_minutes: booking.duration || 30,
+          tour_type: booking.tour_name.toLowerCase().includes('vip') ? 'VIP' : 
+                    booking.tour_name.toLowerCase().includes('solo') ? 'Solo' : 'Tandem',
+          subtotal: booking.total_amount || 100,
+          tax_rate: 20,
+          due_date: dueDate, // Add due date!
+          payment_method_detail: 'Cash',
+          invoice_language: 'en',
+          notes: `Invoice for ${booking.tour_name} booking`,
+        }),
+      });
+
+      if (response.ok) {
+        alert('✅ Invoice created successfully!');
+        await loadBookings(); // Reload to update invoice map
+      } else {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error || errorData.details || 'Failed to create invoice');
+      }
+    } catch (error: any) {
+      console.error('Error creating invoice:', error);
+      alert(`❌ Failed to create invoice: ${error.message}`);
+    } finally {
+      setCreatingInvoice(null);
     }
   };
 
@@ -260,7 +337,10 @@ export default function AdminBookingsPage() {
                     Created
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Actions
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Invoice
                   </th>
                 </tr>
               </thead>
@@ -336,6 +416,29 @@ export default function AdminBookingsPage() {
                               <option value="completed">Completed</option>
                               <option value="cancelled">Cancelled</option>
                             </select>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {invoices.has(booking.id.toString()) ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-400 text-sm">
+                                  ✓ {invoices.get(booking.id.toString())?.invoice_number}
+                                </span>
+                                <button
+                                  onClick={() => router.push('/dashboard/accounting/invoices')}
+                                  className="text-blue-400 hover:text-blue-300 text-xs"
+                                >
+                                  View
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => createInvoiceManually(booking)}
+                                disabled={creatingInvoice === booking.id}
+                                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-500 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                              >
+                                {creatingInvoice === booking.id ? 'Creating...' : '+ Invoice'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                         {isExpanded && customerData && (

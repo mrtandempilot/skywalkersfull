@@ -11,6 +11,14 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    expense_date: new Date().toISOString().split('T')[0],
+    category: 'fuel',
+    description: '',
+    amount: '',
+    vendor: '',
+    payment_method: 'cash',
+  });
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -60,6 +68,41 @@ export default function ExpensesPage() {
       other: 'bg-gray-100 text-gray-800',
     };
     return colors[category] || colors.other;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert([{
+          expense_date: formData.expense_date,
+          category: formData.category,
+          description: formData.description,
+          amount: parseFloat(formData.amount),
+          vendor: formData.vendor || null,
+          payment_method: formData.payment_method,
+        }])
+        .select();
+
+      if (error) throw error;
+
+      alert('✅ Expense added successfully!');
+      setShowAddForm(false);
+      setFormData({
+        expense_date: new Date().toISOString().split('T')[0],
+        category: 'fuel',
+        description: '',
+        amount: '',
+        vendor: '',
+        payment_method: 'cash',
+      });
+      await loadExpenses();
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      alert('❌ Failed to add expense');
+    }
   };
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
@@ -171,26 +214,142 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        {/* Coming Soon Modal */}
+        {/* Add Expense Modal */}
         {showAddForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-8 max-w-md border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Add Expense Form</h3>
-              <p className="text-gray-400 mb-6">The expense entry form is being built. It will include:</p>
-              <ul className="text-gray-400 space-y-2 mb-6 text-sm">
-                <li>• Date picker</li>
-                <li>• Category dropdown (fuel, equipment, etc.)</li>
-                <li>• Description field</li>
-                <li>• Amount input</li>
-                <li>• Payment method</li>
-                <li>• Receipt upload</li>
-              </ul>
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
-              >
-                Close
-              </button>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-8 max-w-2xl w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-white">Add New Expense</h3>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.expense_date}
+                      onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Category *
+                    </label>
+                    <select
+                      required
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="fuel">Fuel</option>
+                      <option value="equipment">Equipment</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="insurance">Insurance</option>
+                      <option value="salaries">Salaries</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="rent">Rent</option>
+                      <option value="utilities">Utilities</option>
+                      <option value="office_supplies">Office Supplies</option>
+                      <option value="transport">Transport</option>
+                      <option value="food">Food</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="e.g., Fuel for company vehicle"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Amount (USD) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0.01"
+                      step="0.01"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Payment Method *
+                    </label>
+                    <select
+                      required
+                      value={formData.payment_method}
+                      onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="credit_card">Credit Card</option>
+                      <option value="debit_card">Debit Card</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="online_payment">Online Payment</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Vendor (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.vendor}
+                    onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+                    placeholder="e.g., Shell Gas Station"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+                  >
+                    Add Expense
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

@@ -401,20 +401,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   
   const totalFlights = pilotsData?.reduce((sum: number, p: any) => sum + (p.total_flights || 0), 0) || 0;
 
-  // Get reviews
-  const { count: pendingReviews } = await supabase
-    .from('reviews')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending');
-
-  const { data: reviewsData } = await supabase
-    .from('reviews')
-    .select('overall_rating')
-    .eq('status', 'approved');
-  
-  const averageRating = reviewsData && reviewsData.length > 0
-    ? reviewsData.reduce((sum: number, r: any) => sum + r.overall_rating, 0) / reviewsData.length
-    : 0;
+  // Reviews functionality not implemented yet - using default values
+  const pendingReviews = 0;
+  const averageRating = 0;
 
   // Calculate growth percentages
   const revenueGrowth = lastMonthRevenue > 0 

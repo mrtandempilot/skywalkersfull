@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import type { Customer } from '@/types/crm';
 
 interface CustomerFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  customer?: Customer | null;
 }
 
-export default function CustomerFormModal({ isOpen, onClose, onSuccess }: CustomerFormModalProps) {
+export default function CustomerFormModal({ isOpen, onClose, onSuccess, customer }: CustomerFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -21,6 +23,30 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
     city: '',
     notes: ''
   });
+
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        first_name: customer.first_name || '',
+        last_name: customer.last_name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        country: customer.country || '',
+        city: customer.city || '',
+        notes: customer.notes || ''
+      });
+    } else {
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        country: '',
+        city: '',
+        notes: ''
+      });
+    }
+  }, [customer]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,18 +60,25 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
         return;
       }
 
-      const response = await fetch('/api/customers', {
-        method: 'POST',
+      const url = '/api/customers';
+      const method = customer ? 'PUT' : 'POST';
+      
+      const bodyData = customer 
+        ? { id: customer.id, ...formData, name: `${formData.first_name} ${formData.last_name}` }
+        : formData;
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(bodyData)
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create customer');
+        throw new Error(data.error || `Failed to ${customer ? 'update' : 'create'} customer`);
       }
 
       // Reset form
@@ -75,7 +108,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Add New Customer</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{customer ? 'Edit Customer' : 'Add New Customer'}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -100,7 +133,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                   required
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
                 />
               </div>
 
@@ -113,7 +146,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                   required
                   value={formData.last_name}
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -127,7 +160,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               />
             </div>
 
@@ -139,7 +172,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               />
             </div>
 
@@ -152,7 +185,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                   type="text"
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
                 />
               </div>
 
@@ -164,7 +197,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                   type="text"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -177,7 +210,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                 rows={3}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               />
             </div>
 
@@ -194,7 +227,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSuccess }: Custom
                 disabled={loading}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               >
-                {loading ? 'Creating...' : 'Create Customer'}
+                {loading ? (customer ? 'Updating...' : 'Creating...') : (customer ? 'Update Customer' : 'Create Customer')}
               </button>
             </div>
           </form>

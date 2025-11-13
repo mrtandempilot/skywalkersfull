@@ -20,6 +20,19 @@ export interface Invoice {
   currency: string;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   
+  // Paragliding-specific fields
+  pilot_id?: string;
+  pilot_name?: string;
+  flight_date?: string;
+  flight_time?: string;
+  flight_duration_minutes?: number;
+  tour_type?: 'Solo' | 'Tandem' | 'VIP';
+  payment_method_detail?: string;
+  qr_code_data?: string;
+  customer_signature?: string; // base64 image
+  invoice_language?: 'tr' | 'en';
+  company_logo_url?: string;
+  
   notes?: string;
   payment_terms?: string;
   

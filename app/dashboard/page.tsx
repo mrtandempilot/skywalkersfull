@@ -23,7 +23,7 @@ export default function DashboardPage() {
         }
 
         // Check if user is admin
-        if (user.email !== 'mrtandempilot@gmail.com') {
+        if (user.email !== 'mrtandempilot@gmail.com' && user.email !== 'faralyaworks@gmail.com') {
           router.push('/');
           return;
         }
@@ -289,15 +289,28 @@ export default function DashboardPage() {
               </svg>
               Manage Pilots
             </a>
-            <a
-              href="/dashboard/analytics"
-              className="flex items-center justify-center px-4 py-3 border border-transparent rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+            <button
+              onClick={() => {
+                // Test notification system
+                const testBooking = {
+                  customer_name: 'Test Customer',
+                  tour_name: 'Test Tour',
+                  total_amount: 150,
+                  booking_date: new Date().toISOString(),
+                  customer_email: 'test@example.com'
+                };
+                // Manually trigger notification
+                const event = new CustomEvent('test-booking', { detail: testBooking });
+                window.dispatchEvent(event);
+                alert('Test notification sent! Check for browser popup, toast, and sound.');
+              }}
+              className="flex items-center justify-center px-4 py-3 border border-transparent rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.868 12.683A17.925 17.925 0 0112 21c7.962 0 12-1.21 12-2.683m-12 2.683a17.925 17.925 0 01-7.132-8.317M12 21V9a6 6 0 10-12 0v12m12-12v12" />
               </svg>
-              View Analytics
-            </a>
+              Test Notification
+            </button>
           </div>
         </div>
       </div>

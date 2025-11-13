@@ -1,58 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { updateCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const { id } = params;
     const body = await request.json();
     const { status } = body;
-    
-    // Get user from auth header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!status) {
+      return NextResponse.json({ error: 'Status is required' }, { status: 400 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Update booking status
-    const { data, error } = await supabase
+    // Update booking status using admin client to bypass RLS
+    const { data, error } = await supabaseAdmin
       .from('bookings')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', params.id)
-      .eq('user_id', user.id)
+      .update({ status })
+      .eq('id', id)
       .select()
       .single();
 
     if (error) {
+      console.error('Error updating booking status:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const booking = data;
-
-    // Update or delete Google Calendar event based on status
-    if (booking.google_calendar_event_id) {
-      try {
-        if (status === 'cancelled') {
-          await deleteCalendarEvent(booking.google_calendar_event_id);
-        } else {
-          await updateCalendarEvent(booking.google_calendar_event_id, booking);
-        }
-      } catch (calendarError) {
-        console.error('Failed to update calendar event:', calendarError);
-        // Continue even if calendar update fails
-      }
-    }
-
-    return NextResponse.json(booking);
+    return NextResponse.json(data);
   } catch (error: any) {
     console.error('Error updating booking:', error);
     return NextResponse.json(

@@ -5,12 +5,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, signOut } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { useNotifications } from "./NotificationProvider";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     // Get initial user
@@ -56,13 +58,15 @@ export default function Navbar() {
             <Link href="/tours" className="hover:text-blue-200 transition">
               Tours
             </Link>
-            <Link href="/calendar" className="hover:text-blue-200 transition">
-              Calendar
-            </Link>
             {user && user.email === 'mrtandempilot@gmail.com' && (
-              <Link href="/dashboard" className="hover:text-blue-200 transition">
-                Dashboard
-              </Link>
+              <>
+                <Link href="/dashboard" className="hover:text-blue-200 transition">
+                  Dashboard
+                </Link>
+                <Link href="/dashboard/notifications" className="hover:text-blue-200 transition">
+                  Notifications
+                </Link>
+              </>
             )}
             <Link href="/about" className="hover:text-blue-200 transition">
               About
@@ -73,6 +77,20 @@ export default function Navbar() {
             
             {!loading && (
               <>
+                {user && user.email === 'mrtandempilot@gmail.com' && (
+                  <div className="relative">
+                    <button className="p-2 hover:bg-blue-700 rounded-lg transition relative">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.868 12.683A17.925 17.925 0 0112 21c7.962 0 12-1.21 12-2.683m-12 2.683a17.925 17.925 0 01-7.132-8.317M12 21V9a6 6 0 10-12 0v12m12-12v12" />
+                      </svg>
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
                 {user ? (
                   <div className="flex items-center space-x-4">
                     <Link href="/account" className="hover:text-blue-200 transition">
@@ -138,13 +156,6 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)}
             >
               Tours
-            </Link>
-            <Link
-              href="/calendar"
-              className="block py-2 hover:text-blue-200 transition"
-              onClick={() => setIsOpen(false)}
-            >
-              Calendar
             </Link>
             {user && user.email === 'mrtandempilot@gmail.com' && (
               <Link
